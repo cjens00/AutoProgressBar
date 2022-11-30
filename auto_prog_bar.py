@@ -1,4 +1,7 @@
+import itertools
 import math
+import timeit
+from itertools import repeat
 from functools import partial
 from typing import Union, TypeVar
 from sys import stdout
@@ -15,7 +18,7 @@ class ProgressBar:
             "LeftCap": "[",
             "RightCap": "]",
             "ProgressIndicator": "=",
-            "NoProgressIndicator": "-",
+            "NoProgressIndicator": "-"
         }
         self.callables: Callables = callables
         self.results: list[any] = []
@@ -28,25 +31,34 @@ class ProgressBar:
         elif callable(self.callables):
             return True
         else:
-            raise TypeError("Argument 'callable' is not a callable type or iterable of.")
+            raise TypeError("Argument 'callables' is not a callable type or iterable of.")
 
     def start(self):
-        maximum_percent_value = 100
-        bar_length = get_terminal_size().columns // 4
-        increment = maximum_percent_value // bar_length
+        # maximum progress value
+        is_complete_number = 100
 
-        g_range_max = 1_000_000
+        # width of progress bar
+        bar_length = get_terminal_size().columns // 4
+
+        # value representing one bar of progress
+        increment = is_complete_number // bar_length
+
+        # repeat is not what i want, finite generator at least worked
+        # TODO: check itertools.cycle()
         gen_progress = (
             (len(self.results) / len(self.callables)) *
-            maximum_percent_value for inf in range(g_range_max)
+            is_complete_number
+            for infinite in repeat(None)
         )
         gen_bars_complete = (
             self.styles["ProgressIndicator"] *
-            (int(next(gen_progress)) // increment) for inf in range(g_range_max)
+            (int(next(gen_progress)) // increment)
+            for infinite in repeat(None)
         )
         gen_bars_incomplete = (
             self.styles["NoProgressIndicator"] *
-            (bar_length - int(next(gen_progress)) // increment) for inf in range(g_range_max)
+            (bar_length - int(next(gen_progress)) // increment)
+            for infinite in repeat(None)
         )
         print(f"{self.title}")
         for call in self.callables:
@@ -54,20 +66,47 @@ class ProgressBar:
             [
                 print(expr, end="") for expr in
                 [
-                    f"\r", self.styles["LeftCap"],
+                    f"\r",
+                    self.styles["LeftCap"],
                     next(gen_bars_complete),
                     next(gen_bars_incomplete),
-                    self.styles["RightCap"], f" {next(gen_progress):2.2f}%"
+                    self.styles["RightCap"],
+                    f" {next(gen_progress):2.2f}%"
                 ]
             ]
             stdout.flush()
         print("\n", end="")
+        return self
+
+    def result(self):
         return self.results
 
 
 if __name__ == "__main__":
-    bar_partial = ProgressBar([partial(math.comb, 10_000_000, 34) for i in range(200_000)],
-                              "math.comb(10_000_000, 34) x 100:").start()
+    imports = "\n".join([
+                          "import itertools",
+                          "import math",
+                          "import timeit",
+                          "from itertools import repeat",
+                          "from functools import partial",
+                          "from typing import Union, TypeVar",
+                          "from sys import stdout",
+                          "from shutil import get_terminal_size",
+                          "from auto_prog_bar import ProgressBar"
+                      ])
 
-    bar_lambda = ProgressBar([lambda: math.comb(10_000_000, 34) for i in range(200_000)],
-                             "math.comb(10_000_000, 34) x 100:").start()
+    bar_partial_time = timeit.timeit(
+        "ProgressBar([partial(sum, range(1_001)) for i in range(200_000)],"
+        "\"sum([0, 1,000]) x 200,000:\").start()",
+        number=10,
+        setup=imports
+    )
+    print(bar_partial_time)
+
+    bar_lambda_time = timeit.timeit(
+        "ProgressBar([lambda: sum(range(1_001)) for i in range(200_000)],"
+        "\"sum([0, 1,000]) x 200,000:\").start()",
+        number=10,
+        setup=imports
+    )
+    print(bar_lambda_time)
