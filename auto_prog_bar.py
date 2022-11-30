@@ -10,7 +10,7 @@ from shutil import get_terminal_size
 Callable = TypeVar("Callable")
 Callables = TypeVar("Callables")
 
-
+# margin
 class ProgressBar:
     def __init__(self, callables: Union[Callable, Callables], title: str = None):
         self.title = "" if title is None else title
