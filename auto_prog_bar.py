@@ -43,8 +43,6 @@ class ProgressBar:
         # value representing one bar of progress
         increment = is_complete_number // bar_length
 
-        # repeat is not what i want, finite generator at least worked
-        # TODO: check itertools.cycle()
         gen_progress = (
             (len(self.results) / len(self.callables)) *
             is_complete_number
